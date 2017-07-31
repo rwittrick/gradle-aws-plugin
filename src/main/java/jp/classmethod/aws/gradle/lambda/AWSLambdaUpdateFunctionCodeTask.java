@@ -48,6 +48,10 @@ public class AWSLambdaUpdateFunctionCodeTask extends ConventionTask {
 	private S3File s3File;
 	
 	@Getter
+	@Setter
+	private Boolean publish;
+	
+	@Getter
 	private UpdateFunctionCodeResult updateFunctionCode;
 	
 	
@@ -60,6 +64,9 @@ public class AWSLambdaUpdateFunctionCodeTask extends ConventionTask {
 	public void updateFunctionCode() throws FileNotFoundException, IOException {
 		// to enable conventionMappings feature
 		String functionName = getFunctionName();
+		File zipFile = getZipFile();
+		S3File s3File = getS3File();
+		Boolean publish = getPublish();
 		
 		if (functionName == null) {
 			throw new GradleException("functionName is required");
@@ -79,7 +86,9 @@ public class AWSLambdaUpdateFunctionCodeTask extends ConventionTask {
 					FileChannel channel = raf.getChannel()) {
 				MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
 				buffer.load();
-				request = request.withZipFile(buffer);
+				request = request
+					.withZipFile(buffer)
+					.withPublish(publish);
 			}
 		} else {
 			// assume s3File is not null
@@ -87,7 +96,8 @@ public class AWSLambdaUpdateFunctionCodeTask extends ConventionTask {
 			request = request
 				.withS3Bucket(s3File.getBucketName())
 				.withS3Key(s3File.getKey())
-				.withS3ObjectVersion(s3File.getObjectVersion());
+				.withS3ObjectVersion(s3File.getObjectVersion())
+				.withPublish(publish);
 		}
 		UpdateFunctionCodeResult updateFunctionCode = lambda.updateFunctionCode(request);
 		getLogger().info("Update Lambda function requested: {}", updateFunctionCode.getFunctionArn());

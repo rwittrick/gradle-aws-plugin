@@ -31,10 +31,7 @@ import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.tasks.TaskAction;
 
 import com.amazonaws.services.lambda.AWSLambda;
-import com.amazonaws.services.lambda.model.CreateFunctionRequest;
-import com.amazonaws.services.lambda.model.CreateFunctionResult;
 import com.amazonaws.services.lambda.model.Environment;
-import com.amazonaws.services.lambda.model.FunctionCode;
 import com.amazonaws.services.lambda.model.FunctionConfiguration;
 import com.amazonaws.services.lambda.model.GetFunctionRequest;
 import com.amazonaws.services.lambda.model.GetFunctionResult;
@@ -46,7 +43,7 @@ import com.amazonaws.services.lambda.model.UpdateFunctionConfigurationRequest;
 import com.amazonaws.services.lambda.model.UpdateFunctionConfigurationResult;
 import com.amazonaws.services.lambda.model.VpcConfig;
 
-public class AWSLambdaMigrateFunctionTask extends ConventionTask {
+public class AWSLambdaUpdateFunctionTask extends ConventionTask {
 	
 	@Getter
 	@Setter
@@ -96,17 +93,14 @@ public class AWSLambdaMigrateFunctionTask extends ConventionTask {
 	@Setter
 	private Boolean publish;
 	
-	@Getter
-	private CreateFunctionResult createFunctionResult;
 	
-	
-	public AWSLambdaMigrateFunctionTask() {
-		setDescription("Create / Update Lambda function.");
+	public AWSLambdaUpdateFunctionTask() {
+		setDescription("Update an existing Lambda function.");
 		setGroup("AWS");
 	}
 	
 	@TaskAction
-	public void createOrUpdateFunction() throws FileNotFoundException, IOException {
+	public void updateFunction() throws FileNotFoundException, IOException {
 		// to enable conventionMappings feature
 		String functionName = getFunctionName();
 		File zipFile = getZipFile();
@@ -138,45 +132,9 @@ public class AWSLambdaMigrateFunctionTask extends ConventionTask {
 			updateFunctionConfiguration(lambda, config);
 		} catch (ResourceNotFoundException e) {
 			getLogger().warn(e.getMessage());
-			getLogger().warn("Creating function... {}", functionName);
-			createFunction(lambda);
+			getLogger().error("Function does not exist... {}", functionName);
+			throw e;
 		}
-	}
-	
-	private void createFunction(AWSLambda lambda) throws IOException {
-		// to enable conventionMappings feature
-		File zipFile = getZipFile();
-		S3File s3File = getS3File();
-		
-		FunctionCode functionCode;
-		if (zipFile != null) {
-			try (RandomAccessFile raf = new RandomAccessFile(getZipFile(), "r");
-					FileChannel channel = raf.getChannel()) {
-				MappedByteBuffer buffer = channel.map(FileChannel.MapMode.READ_ONLY, 0, channel.size());
-				buffer.load();
-				functionCode = new FunctionCode().withZipFile(buffer);
-			}
-		} else {
-			// assume s3File is not null
-			functionCode = new FunctionCode()
-				.withS3Bucket(s3File.getBucketName())
-				.withS3Key(s3File.getKey())
-				.withS3ObjectVersion(s3File.getObjectVersion());
-		}
-		CreateFunctionRequest request = new CreateFunctionRequest()
-			.withFunctionName(getFunctionName())
-			.withRuntime(getRuntime())
-			.withRole(getRole())
-			.withHandler(getHandler())
-			.withDescription(getFunctionDescription())
-			.withTimeout(getTimeout())
-			.withMemorySize(getMemorySize())
-			.withPublish(getPublish())
-			.withVpcConfig(getVpcConfig())
-			.withEnvironment(new Environment().withVariables(getEnvironment()))
-			.withCode(functionCode);
-		createFunctionResult = lambda.createFunction(request);
-		getLogger().info("Create Lambda function requested: {}", createFunctionResult.getFunctionArn());
 	}
 	
 	private void updateFunctionCode(AWSLambda lambda) throws IOException {

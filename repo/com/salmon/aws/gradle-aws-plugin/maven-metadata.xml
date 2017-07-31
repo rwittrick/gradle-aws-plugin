@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.salmon.aws</groupId>
+  <artifactId>gradle-aws-plugin</artifactId>
+  <versioning>
+    <release>0.35-24-g8b020d9-SNAPSHOT+dirty</release>
+    <versions>
+      <version>0.35-24-g8b020d9-SNAPSHOT+dirty</version>
+    </versions>
+    <lastUpdated>20170724060213</lastUpdated>
+  </versioning>
+</metadata>
